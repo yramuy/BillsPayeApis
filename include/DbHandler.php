@@ -10,84 +10,11 @@ ini_set("allow_url_fopen", 1);
 
 // define(APPROVE, 2);
 
+use Twilio\Rest\Client;
+
 class DbHandler
 {
 	private $conn;
-
-	const COMPLAINT_DRAFT = 0; // POSH
-	const COMPLAINT_SUBMIT = 1; // POSH
-	const COMPLAINT_ACCEPTED = 2;
-	const COMPLAINT_REJECTED = 3;
-	const SHOW_CAUSE_NOTICE = 4;
-	const PERSECUTOR_EXPLAINATION = 5;
-	const MEETING_OUTPUT_SETTLEMENT = 6;
-	const MANAGEMENT_ACTION = 7;
-	const MEETING_OUTPUT_NO_SETTLEMENT = 8;
-	const INVESTIGATION_DRAFT = 9;
-	const INVESTIGATION_SUBMIT = 10;
-	const SCHEDULE_MEETING = 11;
-
-	const COMP_TYPE_ORGANISATION = 1; // POSH
-	const COMP_TYPE_CONTRACT_OUTSOURCE = 2; // POSH
-	const COMP_TYPE_TRAINEE = 3; // POSH
-	const COMP_TYPE_OTHER = 4; // POSH
-
-	const HARASSMENT_TYPE_VISUAL = 1; // POSH
-	const HARASSMENT_TYPE_PHYSICAL = 2; // POSH
-	const HARASSMENT_TYPE_OTHER = 3; // POSH
-
-	const REPORTING_PERSON_YES = 0; // POSH
-	const REPORTING_PERSON_NO = 1; // POSH
-
-	const REPORTING_TYPE_ANONYMOUS = 0; // POSH
-	const REPORTING_TYPE_VOLUNTARY = 1; // POSH
-
-	const SICKLEAVE = 12; // Sick leave
-	const ANNUALLEAVE = 13; // Annual Leave
-	const FULLDAY = 0; // full day
-	const HALFDAY = 1; // Half day
-	const SPECIFIEDTIME = 1; // Half day
-	const SUBMITT = 1;
-	const APPROVE = 2;
-	const CANCEL = 0;
-	const REJECT = -1;
-	const TAKEN = 3;
-
-	// USER ROLE IDS
-
-	const ADMIN_USER_ROLE_ID = 1;
-	const ESS_USER_ROLE_ID = 2;
-	const SUPERVISOR = 3;
-	const PROJECTADMIN = 4;
-	const INTERVIEWER = 5;
-	const HIRING_MANAGER_ROLE_ID = 6;
-	const REVIEWER_ROLE_ID = 7;
-	const FINANCE_MANAGER_ROLE_ID = 8;
-	const PROJECTMANAGER = 9;
-	const EMC_USER_ROLE_ID = 10;
-	const ENG_USER_ROLE_ID = 11;
-	const TECH_USER_ROLE_ID = 12;
-	const SHIFT_INCHARGE_USER_ROLE_ID = 13;
-	const OPERATOR = 14;
-	const SHIFT_TECHNICIAN_USER_ROLE_ID = 15;
-	const HEADOFFICETEAM = 17;
-	const PLANT_MANAGER_USER_ROLE_ID = 18;
-	const SHIFT_SUPERVISOR_USER_ROLE_ID = 19;
-	const CENTRALSTOREMANAGER = 20;
-	const DEPARTMENT_MANAGER_ID = 22;
-	const DRIVER_ID = 24;
-	const PROJECTCONTROLLER = 25;
-	const SECURITY = 30;
-
-	const CEO_USER_ROLE_ID = 31;
-	const BID_UPLOAD_ROLE_ID = 32;
-	const ASSIGNER_ROLE_ID = 33;
-	const RESPONDER_ROLE_ID = 34;
-	const ICCACTIONOWNER_ROLE_ID = 35;
-	const RECRUITER_ROLE_ID = 37;
-	const TRAINING_MANAGER_ID = 34;
-	const PLANT_MANAGER = 39;
-	const CORPORATE_HEAD = 40;
 
 	function __construct()
 	{
@@ -95,6 +22,10 @@ class DbHandler
 		require_once dirname(__FILE__) . '/SmsService.php';
 		require_once dirname(__FILE__) . '/PasswordHash.php';
 		require_once dirname(__FILE__) . '/WhatsappService.php';
+		require_once '../vendor/autoload.php';
+		// require_once '../vendor/twilio/sdk/src/Twilio/Rest/Client.php';
+
+
 		// opening db connection
 		date_default_timezone_set('UTC');
 		$db = new DbConnect();
@@ -171,98 +102,119 @@ class DbHandler
 	function userLogin($username, $password)
 	{
 		$data = array();
-		$token = $this->generateApiKey();
-		$query = "SELECT u.id AS id,u.user_role_id AS user_roleid,u.user_name AS user_name,u.user_password AS user_password, emp.emp_number AS emp_number,emp.emp_mobile AS mobile_number,emp.emp_work_email AS email,emp.business_area AS companyId FROM erp_user u LEFT JOIN hs_hr_employee emp ON emp.emp_number = u.emp_number WHERE u.deleted=0 and u.user_name ='$username'";
+		$query = "SELECT * FROM tbl_user WHERE (email ='$username' OR mobile_number = '$username')";
 		$count = mysqli_query($this->conn, $query);
 		if (mysqli_num_rows($count) > 0) {
 			$row = mysqli_fetch_assoc($count);
-			$user_name = $row['user_name'];
 			$user_password = $row['user_password'];
-			$user_id = $row['id'];
-			$user_roleid = $row['user_roleid'];
-			$mobileno = $row['mobile_number'];
-			$email = $row['email'];
-			$companyId = $row['companyId'];
-			$emp_num = $row['emp_number'];
-			$data['emp_number'] = $emp_num;
 			$verify = password_verify($password, $user_password);
 			if ($verify) {
-
-				$rndno = rand(1000, 9999);
-
-				$mobile = $mobileno;
-
-				$query = "SELECT * FROM erp_user_token WHERE userId = $user_id";
-				$count = mysqli_query($this->conn, $query);
-				$otpnumber = md5($rndno);
-
-				if (mysqli_num_rows($count) > 0) {
-					$row = mysqli_fetch_assoc($count);
-					$token_userid = $row['userid'];
-					if ($token_userid == $user_id) {
-						$updatesql = "UPDATE erp_user_token SET userid=$user_id, otp='$otpnumber',session_token='$token' WHERE userid=$user_id";
-						if ($result2 = mysqli_query($this->conn, $updatesql)) {
-							$data['session_token'] = $token;
-							$data['user_id'] = $user_id;
-							$data['user_roleid'] = $user_roleid;
-							$data['company_id'] = $companyId;
-							$supervisor = $this->isSupervisor($emp_num);
-							$userRoleId = $this->getUserRoleByUserId($user_id);
-
-							if ($userRoleId['name'] == 'Department Manager') {
-								$data['role'] = 'Department Manager';
-							} else {
-
-								if (!empty($supervisor)) {
-									$data['role'] = 'Supervisor';
-								} else {
-									$data['role'] = $userRoleId['name'];
-								}
-							}
-
-							$data['userDetails'] = $data;
-							// $data['role'] = $userRoleId['name'];
-							$data['status'] = 1;
-						} else {
-							$data['status'] = 0;
-						}
-					} else {
-						$data['status'] = 0;
-					}
-				} else {
-					$sql = "INSERT INTO erp_user_token (userid,otp,session_token) VALUES (?,?,?)";
-
-					if ($stmt = mysqli_prepare($this->conn, $sql)) {
-						// Bind variables to the prepared statement as parameters
-						mysqli_stmt_bind_param($stmt, "iss", $user_id, $otpnumber, $token);
-
-						// Attempt to execute the prepared statement
-						if (mysqli_stmt_execute($stmt)) {
-							$data['session_token'] = $token;
-							$data['user_id'] = $user_id;
-							$data['company_id'] = $companyId;
-							$supervisor = $this->isSupervisor($emp_num);
-							if ($supervisor) {
-								$data['supervisorId'] = $supervisor;
-								$data['supervisor'] = 'Supervisor';
-							}
-							$data['userDetails'] = $data;
-							$data['status'] = 1;
-						} else {
-							$data['status'] = 0;
-						}
-					} else {
-						//echo "ERROR: Could not prepare query: $sql. " . mysqli_error($this->conn);
-						$data['status'] = 0;
-					}
+				$data['user_name'] = $row['user_name'];
+				$data['user_id'] = $row['id'];
+				if ($row['user_role_id'] == 1) {
+					$data['role_name'] = 'Admin';
 				}
+				$data['user_role_id'] = $row['user_role_id'];
+				$data['mobileno'] = $row['mobile_number'];
+				$data['email'] = $row['email'];
+				$data['status'] = $row['status'];
+				$data['userDetails'] = $data;
+
 			} else {
 				$data['status'] = 0;
+				$data['userDetails'] = [];
 			}
 		} else {
 			$data['status'] = 0;
+			$data['userDetails'] = [];
 		}
 		return $data;
+	}
+
+	function sendOTP($number)
+	{
+		$data = array();
+		$data1 = array();
+		// Twilio credentials
+		$accountSid = 'AC5801d3baebbaef345085f50cad6a4c38';
+		$authToken = 'c812c319cbc37b12547305eb19fe1da9';
+		$twilioNumber = '+12512801976';
+
+		// Your recipient's phone number (e.g., +1234567890)
+		// $recipientNumber = '+917729070810';
+
+		// Generate a random 6-digit OTP
+		$otp = mt_rand(100000, 999999);
+
+		// Store the OTP in a session or database for verification later
+// For example, you can use $_SESSION['otp'] = $otp;
+
+		// Twilio API client
+		$client = new Client($accountSid, $authToken);
+
+		// Twilio message body
+		$messageBody = "Your OTP is: $otp";
+
+		try {
+			// Send SMS using Twilio
+			$message = $client->messages->create(
+				$number,
+				[
+					'from' => $twilioNumber,
+					'body' => $messageBody,
+				]
+			);
+
+			$data1['mobnumber'] = $number;
+			$data1['otp'] = $otp;
+			$data['status'] = 1;
+			$data['message'] = 'OTP sent successfully';
+			$data['otpDetails'] = $data1;
+
+
+			// Output success message
+			// echo "OTP sent successfully to $recipientNumber.";
+		} catch (Exception $e) {
+			$data['status'] = 0;
+			$data['message'] = 'Otp failed';
+			$data['otpDetails'] = $data;
+			// Handle errors
+			echo "Error: " . $e->getMessage();
+		}
+
+		return $data;
+	}
+
+	function saveUser($data)
+	{
+		$output = array();
+
+		$hashed_password = password_hash($data['password'], PASSWORD_DEFAULT);
+		$roleId = 2;
+		$firstname = $data['first_name'];
+		$lastname = $data['last_name'];
+		$username = $firstname . ' ' . $lastname;
+		$email = $data['email'];
+		$mobnumber = $data['mobile_number'];
+
+
+		$sql = "INSERT INTO tbl_user(user_role_id,user_name,email,mobile_number,user_password) VALUES(?,?,?,?,?)";
+		if ($stmt = mysqli_prepare($this->conn, $sql)) {
+			mysqli_stmt_bind_param($stmt, "issis", $roleId, $username, $email, $mobnumber, $hashed_password);
+			if (mysqli_stmt_execute($stmt)) {
+				$output["status"] = 1;
+				$output["message"] = "Signup successfully";
+			} else {
+				$output["status"] = 0;
+				$output["message"] = "failed";
+			}
+		} else {
+			$output["status"] = 0;
+			$output["message"] = "failed";
+		}
+
+		return $output;
+
 	}
 
 	function isSupervisor($empnum)

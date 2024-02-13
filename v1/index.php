@@ -173,7 +173,6 @@ $app->post('/generate/sessiontoken', 'authenticatedefault', function () use ($ap
     echoRespnse(200, $response);
 });
 
-
 $app->post('/login', 'authenticatedefault', function () use ($app) {
 
     $json = $app->request->getBody();
@@ -197,6 +196,39 @@ $app->post('/login', 'authenticatedefault', function () use ($app) {
         $response['message'] = 'Incorrect Passcode';
         $response["userDetails"] = array();
     }
+
+    echoRespnse(200, $response);
+});
+
+$app->post('/sendOTP', 'authenticatedefault', function () use ($app) {
+
+    $json = $app->request->getBody();
+    $data = json_decode($json, true);
+
+    $mobileNumber = $data['mobileNumber'];
+    $response = array();
+    $db = new DbHandler();
+    $result = $db->sendOTP($mobileNumber);
+
+    $response["status"] = $result['status'];
+    
+    $response['message'] = $result['message'];
+    $response["otpDetails"] = $result['otpDetails'];
+
+    echoRespnse(200, $response);
+});
+
+$app->post('/signUp', 'authenticatedefault', function () use ($app) {
+
+    $json = $app->request->getBody();
+    $data = json_decode($json, true);
+
+    $response = array();
+    $db = new DbHandler();
+    $result = $db->saveUser($data);
+
+    $response["status"] = $result['status'];    
+    $response['message'] = $result['message'];
 
     echoRespnse(200, $response);
 });

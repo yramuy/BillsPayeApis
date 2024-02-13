@@ -5,29 +5,30 @@
  * @author arun kumar
  * @link URL Tutorial link
  */
-class DbConnect 
+class DbConnect
 {
-    private $conn;
+  private $conn;
 
-    function __construct() {        
-    }
+  function __construct()
+  {
+  }
 
-    function connect() 
-    {
-      
-      $host="192.168.235.39";
-      // $host="localhost";
-      $dbuser="erpposh";
-      $dbpassword="erpposh";
-      $database="erp_posh";
+  function connect()
+  {
 
-      // $host="localhost";
-      // $dbuser="entreplan";
-      // $dbpassword="N3plan";
-      // $database="entreplan";
-      $conn=mysqli_connect($host,$dbuser, $dbpassword, $database);
-      return  $conn;
-    }
+    // $host="192.168.235.39";
+    // // $host="localhost";
+    // $dbuser="erpposh";
+    // $dbpassword="erpposh";
+    // $database="erp_posh";
+
+    $host = "193.203.184.4";
+    $dbuser = "u378733873_Billspaye";
+    $dbpassword = "Billspaye@2024";
+    $database = "u378733873_billspaye";
+    $conn = mysqli_connect($host, $dbuser, $dbpassword, $database);
+    return $conn;
+  }
 
 
 }
