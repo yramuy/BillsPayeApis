@@ -193,7 +193,7 @@ $app->post('/login', 'authenticatedefault', function () use ($app) {
 
     } else {
         $response['status'] = 0;
-        $response['message'] = 'Incorrect Passcode';
+        $response['message'] = 'Incorrect Username or Password';
         $response["userDetails"] = array();
     }
 
@@ -233,14 +233,169 @@ $app->post('/signUp', 'authenticatedefault', function () use ($app) {
     echoRespnse(200, $response);
 });
 
-$app->get('/menuList', 'authenticatedefault', function () use ($app) {
+$app->get('/categories', 'authenticatedefault', function () use ($app) {
 
     $response = array();
     $db = new DbHandler();
-    $result = $db->getMenuList();
+    $req = $app->request;
+    // $base_url = $req->getUrl()."".$req->getRootUri()."/";
+    $base_url = $req->getUrl()."/BillsPaye/uploads/";
+    // echo $base_url;die;
+    $result = $db->getCategories($base_url);
 
     $response['status'] = $result['status'];
-    $response['menu'] = $result['menu'];
+    $response['category'] = $result['category'];
+
+    echoRespnse(200, $response);
+
+});
+
+$app->post('/subCategories', 'authenticatedefault', function () use ($app) {
+
+    $response = array();
+    $json = $app->request->getBody();
+    $data = json_decode($json, true);
+    $db = new DbHandler();
+    $req = $app->request;
+    // $base_url = $req->getUrl()."".$req->getRootUri()."/";
+    $base_url = $req->getUrl()."/BillsPaye/uploads/";
+    // echo $base_url;die;
+    $result = $db->getSubCategories($data,$base_url);
+
+    $response['status'] = $result['status'];
+    $response['sub_categories'] = $result['sub_categories'];
+    $response['categoryOffers'] = $result['categoryOffers'];
+
+    echoRespnse(200, $response);
+
+});
+
+$app->get('/states', 'authenticatedefault', function () use ($app) {
+
+    $response = array();
+    $db = new DbHandler();
+    $req = $app->request;
+    $result = $db->getStates();
+    $response['status'] = $result['status'];
+    $response['states'] = $result['states'];
+
+    echoRespnse(200, $response);
+
+});
+
+$app->post('/citiesByState', 'authenticatedefault', function () use ($app) {
+
+    $response = array();
+    $json = $app->request->getBody();
+    $data = json_decode($json, true);
+    $db = new DbHandler();
+    
+    $result = $db->getCitiesByState($data);
+
+    $response['status'] = $result['status'];
+    $response['cities'] = $result['cities'];
+
+    echoRespnse(200, $response);
+
+});
+
+$app->post('/most_exciting_offers', 'authenticatedefault', function () use ($app) {
+
+    $response = array();
+    $json = $app->request->getBody();
+    $data = json_decode($json, true);
+    $db = new DbHandler();
+    $req = $app->request;
+    // $base_url = $req->getUrl()."".$req->getRootUri()."/";
+    $base_url = $req->getUrl()."/BillsPaye/uploads/";
+    $result = $db->getMostExcitingOffers($data,$base_url);
+
+    $response['status'] = $result['status'];
+    $response['offers'] = $result['offers'];
+
+    echoRespnse(200, $response);
+
+});
+
+$app->post('/subCategoryDetails', 'authenticatedefault', function () use ($app) {
+
+    $response = array();
+    $json = $app->request->getBody();
+    $data = json_decode($json, true);
+    $db = new DbHandler();
+    $req = $app->request;
+    // $base_url = $req->getUrl()."".$req->getRootUri()."/";
+    $base_url = $req->getUrl()."/BillsPaye/uploads/";
+    $result = $db->getSubCategoryDetailsById($data,$base_url);
+
+    $response['status'] = $result['status'];
+    $response['subCategoryDetails'] = $result['subCategoryDetails'];
+
+    echoRespnse(200, $response);
+
+});
+//  saveUpdateFavoriteItem
+$app->post('/addRemoveWishlist', 'authenticatedefault', function () use ($app) {
+
+    $response = array();
+    $json = $app->request->getBody();
+    $data = json_decode($json, true);
+    $db = new DbHandler();
+    $result = $db->addRemoveWishlist($data);
+
+    $response['status'] = $result['status'];
+    $response['message'] = $result['message'];
+
+    echoRespnse(200, $response);
+
+});
+//  saveUpdateFavoriteItem
+$app->post('/userWishlist', 'authenticatedefault', function () use ($app) {
+
+    $response = array();
+    $json = $app->request->getBody();
+    $data = json_decode($json, true);
+    $db = new DbHandler();
+    $req = $app->request;
+    // $base_url = $req->getUrl()."".$req->getRootUri()."/";
+    $base_url = $req->getUrl()."/BillsPaye/uploads/";
+    $result = $db->getUserWishlist($data,$base_url);
+
+    $response['status'] = $result['status'];
+    $response['wishlist'] = $result['wishlist'];
+
+    echoRespnse(200, $response);
+
+});
+//  User Reviews
+$app->post('/addReview', 'authenticatedefault', function () use ($app) {
+
+    $response = array();
+    $json = $app->request->getBody();
+    $data = json_decode($json, true);
+    $db = new DbHandler();
+    $result = $db->saveUserReview($data);
+
+    $response['status'] = $result['status'];
+    $response['message'] = $result['message'];
+
+    echoRespnse(200, $response);
+
+});
+//  All Category With Offers
+$app->post('/allCategoryWithOffers', 'authenticatedefault', function () use ($app) {
+
+    $response = array();
+    $json = $app->request->getBody();
+    $data = json_decode($json, true);
+    $db = new DbHandler();
+    $req = $app->request;
+    // $base_url = $req->getUrl()."".$req->getRootUri()."/";
+    $base_url = $req->getUrl()."/BillsPaye/uploads/";
+    $result = $db->getAllCategoryWithOffers($data,$base_url);
+
+    $response['status'] = $result['status'];
+    $response['categoryWithOffers'] = $result['categoryWithOffers'];
 
     echoRespnse(200, $response);
 
