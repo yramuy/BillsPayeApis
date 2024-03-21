@@ -436,6 +436,41 @@ $app->post('/proceedToPay', 'authenticatedefault', function () use ($app) {
 
 });
 
+//  POSTS
+$app->get('/posts', 'authenticatedefault', function () use ($app) {
+
+    $response = array();
+    $json = $app->request->getBody();
+    $data = json_decode($json, true);
+    $db = new DbHandler();
+    $req = $app->request;
+    // $base_url = $req->getUrl()."".$req->getRootUri()."/";
+    $base_url = $req->getUrl()."/BillsPaye/uploads/";
+    $result = $db->getPosts($base_url);
+
+    $response['status'] = $result['status'];
+    $response['posts'] = $result['posts'];
+
+    echoRespnse(200, $response);
+
+});
+
+//Save Transaction Response
+$app->post('/saveTransaction', 'authenticatedefault', function () use ($app) {
+
+    $response = array();
+    $json = $app->request->getBody();
+    $data = json_decode($json, true);
+    $db = new DbHandler();
+    $result = $db->saveTransaction($data);
+
+    $response['status'] = $result['status'];
+    $response['message'] = $result['message'];
+
+    echoRespnse(200, $response);
+
+});
+
 ///////////////////////////////////////////////////
 /**
  * Verifying required params posted or not
