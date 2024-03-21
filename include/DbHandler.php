@@ -293,6 +293,43 @@ class DbHandler
 
 		return $output;
 	}
+
+	function getCategoryTopPicks($path)
+	{
+
+		$output = array();
+
+		$query = "SELECT c.name,sc.* FROM tbl_categories c LEFT JOIN tbl_sub_categories sc ON c.id = sc.category_id ORDER BY sc.rating DESC";
+		$sql = mysqli_query($this->conn, $query);
+
+		if (mysqli_num_rows($sql) > 0) {
+			$output1 = array();
+			while ($row = mysqli_fetch_assoc($sql)) {
+				if ($row['category_id'] != null) {
+					$output['category_id'] = $row['category_id'];
+					$output['category_name'] = $row['name'];
+					$output['sub_category_id'] = $row['id'];
+					$output['sub_category_name'] = $row['sub_category_name'];	
+					$output['rating'] = $row['rating'];
+					// $output['offerDetails'] = $this->getOffer($row['id']);
+					$output['file_name'] = $row['file_name'];
+					$output['imagePath'] = $path.''.$row['file_name'];
+					$output1[] = $output;
+				}
+				
+				
+			}
+
+			$output['status'] = 1;
+			$output['top_picks'] = $output1;
+
+		} else {
+			$output['status'] = 0;
+			$output['top_picks'] = array();
+		}
+
+		return $output;
+	}
 	
 	function getTopPicks($id,$path) {
 	    $data1 = array();
@@ -330,6 +367,15 @@ class DbHandler
 				$output['rating'] = $row['rating'];
 				$output['distance'] = $row['distance'];
 				$output['wishlist_status'] = $this->getWishlistData($id,$row['id'],$user_id);
+				$ftvalue = "";
+				if(!empty($row['food_type'])){
+				    $ftarray = explode(',', $row['food_type']);
+				    $ftarray = array_map(function($item) {
+				        return $item == 1 ? "Veg" : ($item == 2 ? "Non Veg" : "");
+				    }, $ftarray);
+				    $ftvalue = implode(',', $ftarray);
+				}
+				$output['foodTypes'] = $ftvalue;
 				$output['file_name'] = $row['file_name'];
 				$output['imagePath'] = $path.''.$row['file_name'];
 				$output['offerDetails'] = $this->getOffer($row['id']);
@@ -353,13 +399,16 @@ class DbHandler
 	function getOffer($id) {
 
 		$offer = array();
-		$query = "SELECT * FROM tbl_offers WHERE sub_cat_id = $id ORDER BY offer DESC limit 1";
+		$query = "SELECT * FROM tbl_offers WHERE sub_cat_id = $id ORDER BY id DESC limit 1";
 		$sql = mysqli_query($this->conn, $query);
 		if (mysqli_num_rows($sql) > 0) {
 			$row = mysqli_fetch_array($sql);			
 
 			$offer['offer_title'] = $row['offer_title'];
 			$offer['offer'] = $row['offer'];
+		} else {
+			$offer['offer_title'] = "";
+			$offer['offer'] = 0;
 		}
 
 		return $offer;
@@ -444,6 +493,7 @@ class DbHandler
 	function getSubCategoryDetailsById($data,$path) {
 	    $output = array();
 	    $id = $data['sub_category_id'];
+	    $user_id = $data['user_id'];
 	    $query = "SELECT * FROM tbl_sub_categories WHERE id = $id";
 	    $sql = mysqli_query($this->conn, $query);
 	    
@@ -456,11 +506,23 @@ class DbHandler
 				$output['description'] = $row['sub_cat_description'];
 				$output['address'] = $row['sub_cat_address'];
 				$output['distance'] = $row['distance'];
+
+				$ftvalue = "";
+				if(!empty($row['food_type'])){
+				    $ftarray = explode(',', $row['food_type']);
+				    $ftarray = array_map(function($item) {
+				        return $item == 1 ? "Veg" : ($item == 2 ? "Non Veg" : "");
+				    }, $ftarray);
+				    $ftvalue = implode(',', $ftarray);
+				}
+				$output['foodTypes'] = $ftvalue;
 				$output['file_name'] = $row['file_name'];
 				$output['subCatImg'] = $path.''.$row['file_name'];
 				$output['offerDetails'] = $this->getOfferDetails($row['id'],$path);
 				$output['menuDetails'] = $this->getMenus($row['id'],$path);
 				$output['reviews'] = $this->getReviews($row['id'],$path);
+				$output['reviewCnt'] = $this->getReviewCount($row['id'],$user_id);
+				$output['latestOffer'] = $this->getOffer($row['id']);
 				$output['photos'] = [];
 				$data1[] = $output;
 			}
@@ -519,7 +581,7 @@ class DbHandler
 
 	function getReviews($id,$path) {
 		$output1 = array();
-		$query = "SELECT r.*,u.user_name FROM tbl_reviews r 
+		$query = "SELECT r.*,u.user_name, DATE(r.created_on) as reviewDate FROM tbl_reviews r 
 		LEFT JOIN tbl_user u ON r.user_id = u.id
 		WHERE r.sub_cat_id = $id ORDER BY r.id DESC";
 		$sql = mysqli_query($this->conn, $query);
@@ -530,10 +592,11 @@ class DbHandler
 				$output['cat_id'] = $row['cat_id'];
 				$output['sub_cat_id'] = $row['sub_cat_id'];
 				$output['user_id'] = $row['user_id'];
+				$output['user_name'] = $row['user_name'];
 				$output['rating'] = $row['rating'];
 				$output['short_text'] = $row['short_text'];
 				$output['long_text'] = $row['long_text'];
-				$output['date'] = $row['created_on'];
+				$output['date'] = $row['reviewDate'];
 				// $output['menuImg'] = $path.''.$row['image_name'];
 				$output1[] = $output;
 			}
@@ -667,6 +730,16 @@ class DbHandler
 		return $status;
 	}
 
+	// User Wishlist Status
+	function getReviewCount($sub_cat_id, $user_id) {
+
+		$query = "SELECT * FROM tbl_reviews WHERE sub_cat_id = $sub_cat_id AND user_id = $user_id";
+		$sql = mysqli_query($this->conn, $query);
+		$count = mysqli_num_rows($sql);
+
+		return $count;
+	}
+
 	// saveUserReview
 	function saveUserReview($data) {
 		$output = array();
@@ -704,7 +777,7 @@ class DbHandler
 		$category_id = $data['category_id'];
 		$user_id = $data['user_id'];
 		
-			$query = "SELECT o.*,c.name as category,sc.sub_category_name,sc.file_name FROM tbl_offers o 
+			$query = "SELECT o.*,c.name as category,sc.sub_category_name,sc.file_name,sc.sub_cat_description FROM tbl_offers o 
 			LEFT JOIN tbl_categories c ON o.cat_id = c.id
 			LEFT JOIN tbl_sub_categories sc ON o.sub_cat_id = sc.id";
 
@@ -724,6 +797,7 @@ class DbHandler
 						"sub_cat_id" => $row['sub_cat_id'],
 						"category" => $row['category'],
 						"subCatName" => $row['sub_category_name'],
+						"description" => $row['sub_cat_description'],
 						"offer_title" => $row['offer_title'],
 						"offer" => $row['offer'],
 						"wishlist_status" => $this->getWishlistData($row['cat_id'],$row['sub_cat_id'],$user_id),
@@ -740,6 +814,62 @@ class DbHandler
 			}		
 
 		return $output;
+	}
+
+	function proceedToPayCalculation($data) {
+
+		$userId = $data['user_id'];
+		$catId = $data['cat_id'];
+		$subCatId = $data['sub_cat_id'];
+
+		if (!empty($data['offer'])) {
+			$offer = $data['offer'];
+		} else {
+			$offer = 0;
+		}		
+		$amount = $data['amount'];
+
+		$originalPrice = $amount;
+		$discount = $offer; // 20%
+		$discountAmount = $originalPrice * ($discount / 100);
+		$discountedPrice = $originalPrice - $discountAmount;
+		$bill_date = date("j F Y");
+		$bill_time = date("H:i:s a");
+
+		$billingDetails = $this->billingDetails($userId,$subCatId);
+		$offer = $this->getOffer($subCatId);
+		$output = array();
+
+		$output1 = array(
+			"billingById" => $userId,
+			"billingBy" => $billingDetails['billingBy'],
+			"billingToId" => $subCatId,
+			"billingTo" => $billingDetails['billingTo'],
+			"originalPrice" => $originalPrice,
+			"discount" => $discount."%",			
+			"offer_title" => $offer['offer_title'],
+			"savingPrice" => $discountAmount,
+			"finalPrice" => $discountedPrice,
+			"date" => $bill_date,
+			"time" => $bill_time,
+		);
+
+		$output['status'] = 1;
+		$output['billDetails'] = $output1;
+
+		return $output;
+
+	}
+	
+	function billingDetails($userId,$subCatId) {
+		$query = "SELECT sub_category_name as billingTo, (SELECT user_name FROM tbl_user WHERE id = '$userId') as billingBy FROM tbl_sub_categories WHERE id = '$subCatId'";
+		$sql = mysqli_query($this->conn, $query);
+		$row = "";
+		if (mysqli_num_rows($sql) > 0) {
+			$row = mysqli_fetch_array($sql);
+		}
+
+		return $row;
 	}
 	/* ------------------------------ END API's-----------------------*/
 

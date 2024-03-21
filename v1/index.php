@@ -250,6 +250,23 @@ $app->get('/categories', 'authenticatedefault', function () use ($app) {
 
 });
 
+$app->get('/categoryTopPicks', 'authenticatedefault', function () use ($app) {
+
+    $response = array();
+    $db = new DbHandler();
+    $req = $app->request;
+    // $base_url = $req->getUrl()."".$req->getRootUri()."/";
+    $base_url = $req->getUrl()."/BillsPaye/uploads/";
+    // echo $base_url;die;
+    $result = $db->getCategoryTopPicks($base_url);
+
+    $response['status'] = $result['status'];
+    $response['top_picks'] = $result['top_picks'];
+
+    echoRespnse(200, $response);
+
+});
+
 $app->post('/subCategories', 'authenticatedefault', function () use ($app) {
 
     $response = array();
@@ -400,6 +417,25 @@ $app->post('/allCategoryWithOffers', 'authenticatedefault', function () use ($ap
     echoRespnse(200, $response);
 
 });
+//  All Category With Offers
+$app->post('/proceedToPay', 'authenticatedefault', function () use ($app) {
+
+    $response = array();
+    $json = $app->request->getBody();
+    $data = json_decode($json, true);
+    $db = new DbHandler();
+    // $req = $app->request;
+    // // $base_url = $req->getUrl()."".$req->getRootUri()."/";
+    // $base_url = $req->getUrl()."/BillsPaye/uploads/";
+    $result = $db->proceedToPayCalculation($data);
+
+    $response['status'] = $result['status'];
+    $response['billDetails'] = $result['billDetails'];
+
+    echoRespnse(200, $response);
+
+});
+
 ///////////////////////////////////////////////////
 /**
  * Verifying required params posted or not
